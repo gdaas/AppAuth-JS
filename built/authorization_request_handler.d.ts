@@ -7,7 +7,7 @@ import { QueryStringUtils } from './query_string_utils';
  * This type represents a lambda that can take an AuthorizationRequest,
  * and an AuthorizationResponse as arguments.
  */
-export declare type AuthorizationListener = (request: AuthorizationRequest | string, response?: AuthorizationResponse | null, error?: AuthorizationError | null) => void;
+export declare type AuthorizationListener = (request: AuthorizationRequest, response: AuthorizationResponse | null, error: AuthorizationError | null) => void;
 export declare type WindowOpenerListener = (link: string) => void;
 /**
  * Represents a structural type holding both authorization request and response.
@@ -60,7 +60,7 @@ export declare abstract class AuthorizationRequestHandler {
     /**
      * Sets the default Authorization Service notifier.
      */
-    setAuthorizationNotifier(notifier: AuthorizationNotifier): AuthorizationRequestHandler;
+    setAuthorizationNotifier(notifier: AuthorizationNotifier): void;
     /**
      * Sets the window open notifier.
      */
