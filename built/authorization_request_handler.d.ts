@@ -7,7 +7,8 @@ import { QueryStringUtils } from './query_string_utils';
  * This type represents a lambda that can take an AuthorizationRequest,
  * and an AuthorizationResponse as arguments.
  */
-export declare type AuthorizationListener = (request: AuthorizationRequest, response: AuthorizationResponse | null, error: AuthorizationError | null) => void;
+export declare type AuthorizationListener = (request: AuthorizationRequest | string, response?: AuthorizationResponse | null, error?: AuthorizationError | null) => void;
+export declare type WindowOpenerListener = (link: string) => void;
 /**
  * Represents a structural type holding both authorization request and response.
  */
@@ -28,6 +29,15 @@ export declare class AuthorizationNotifier {
      */
     onAuthorizationComplete(request: AuthorizationRequest, response: AuthorizationResponse | null, error: AuthorizationError | null): void;
 }
+/**
+ * Window opener notifier.
+ * This manages the communication of the opening of a new browser window.
+ */
+export declare class WindowOpenerNotifier {
+    private listener;
+    setWindowOpenerListener(listener: WindowOpenerListener): void;
+    onWindowOpen(link: string): void;
+}
 export declare const BUILT_IN_PARAMETERS: string[];
 /**
  * Defines the interface which is capable of handling an authorization request
@@ -38,6 +48,7 @@ export declare abstract class AuthorizationRequestHandler {
     protected generateRandom: RandomGenerator;
     constructor(utils: QueryStringUtils, generateRandom: RandomGenerator);
     protected notifier: AuthorizationNotifier | null;
+    protected windowOpenerNotifier: WindowOpenerNotifier | null;
     /**
      * A utility method to be able to build the authorization request URL.
      */
@@ -50,6 +61,10 @@ export declare abstract class AuthorizationRequestHandler {
      * Sets the default Authorization Service notifier.
      */
     setAuthorizationNotifier(notifier: AuthorizationNotifier): AuthorizationRequestHandler;
+    /**
+     * Sets the window open notifier.
+     */
+    setWindowOpenerNotifier(notifier: WindowOpenerNotifier): AuthorizationRequestHandler;
     /**
      * Makes an authorization request.
      */

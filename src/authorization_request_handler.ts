@@ -12,31 +12,41 @@
  * limitations under the License.
  */
 
-import {AuthorizationRequest, AuthorizationRequestJson} from './authorization_request';
-import {AuthorizationError, AuthorizationErrorJson, AuthorizationResponse, AuthorizationResponseJson} from './authorization_response';
-import {AuthorizationServiceConfiguration} from './authorization_service_configuration';
-import {cryptoGenerateRandom, RandomGenerator} from './crypto_utils';
-import {log} from './logger';
-import {QueryStringUtils} from './query_string_utils';
-import {StringMap} from './types';
-
+import {
+  AuthorizationRequest,
+  AuthorizationRequestJson
+} from './authorization_request';
+import {
+  AuthorizationError,
+  AuthorizationErrorJson,
+  AuthorizationResponse,
+  AuthorizationResponseJson
+} from './authorization_response';
+import { AuthorizationServiceConfiguration } from './authorization_service_configuration';
+import { cryptoGenerateRandom, RandomGenerator } from './crypto_utils';
+import { log } from './logger';
+import { QueryStringUtils } from './query_string_utils';
+import { StringMap } from './types';
 
 /**
  * This type represents a lambda that can take an AuthorizationRequest,
  * and an AuthorizationResponse as arguments.
  */
-export type AuthorizationListener =
-    (request: AuthorizationRequest,
-     response: AuthorizationResponse|null,
-     error: AuthorizationError|null) => void;
+export type AuthorizationListener = (
+  request: AuthorizationRequest,
+  response: AuthorizationResponse | null,
+  error: AuthorizationError | null
+) => void;
+
+export type WindowOpenerListener = (link: string) => void;
 
 /**
  * Represents a structural type holding both authorization request and response.
  */
 export interface AuthorizationRequestResponse {
   request: AuthorizationRequest;
-  response: AuthorizationResponse|null;
-  error: AuthorizationError|null;
+  response: AuthorizationResponse | null;
+  error: AuthorizationError | null;
 }
 
 /**
@@ -44,7 +54,7 @@ export interface AuthorizationRequestResponse {
  * This manages the communication of the AuthorizationResponse to the 3p client.
  */
 export class AuthorizationNotifier {
-  private listener: AuthorizationListener|null = null;
+  private listener: AuthorizationListener | null = null;
 
   setAuthorizationListener(listener: AuthorizationListener) {
     this.listener = listener;
@@ -54,9 +64,10 @@ export class AuthorizationNotifier {
    * The authorization complete callback.
    */
   onAuthorizationComplete(
-      request: AuthorizationRequest,
-      response: AuthorizationResponse|null,
-      error: AuthorizationError|null): void {
+    request: AuthorizationRequest,
+    response: AuthorizationResponse | null,
+    error: AuthorizationError | null
+  ): void {
     if (this.listener) {
       // complete authorization request
       this.listener(request, response, error);
@@ -64,34 +75,65 @@ export class AuthorizationNotifier {
   }
 }
 
+/**
+ * Window opener notifier.
+ * This manages the communication of the opening of a new browser window.
+ */
+export class WindowOpenerNotifier {
+  private listener: WindowOpenerListener | null = null;
+
+  setWindowOpenerListener(listener: WindowOpenerListener) {
+    this.listener = listener;
+  }
+
+  onWindowOpen(link: string): void {
+    if (this.listener) {
+      // complete authorization request
+      this.listener(link);
+    }
+  }
+}
+
 // TODO(rahulrav@): add more built in parameters.
 /* built in parameters. */
-export const BUILT_IN_PARAMETERS = ['redirect_uri', 'client_id', 'response_type', 'state', 'scope'];
+export const BUILT_IN_PARAMETERS = [
+  'redirect_uri',
+  'client_id',
+  'response_type',
+  'state',
+  'scope'
+];
 
 /**
  * Defines the interface which is capable of handling an authorization request
  * using various methods (iframe / popup / different process etc.).
  */
 export abstract class AuthorizationRequestHandler {
-  constructor(public utils: QueryStringUtils, protected generateRandom: RandomGenerator) {}
+  constructor(
+    public utils: QueryStringUtils,
+    protected generateRandom: RandomGenerator
+  ) {}
 
   // notifier send the response back to the client.
-  protected notifier: AuthorizationNotifier|null = null;
+  protected notifier: AuthorizationNotifier | null = null;
+
+  protected windowOpenerNotifier: WindowOpenerNotifier | null = null;
 
   /**
    * A utility method to be able to build the authorization request URL.
    */
   protected buildRequestUrl(
-      configuration: AuthorizationServiceConfiguration,
-      request: AuthorizationRequest) {
+    configuration: AuthorizationServiceConfiguration,
+    request: AuthorizationRequest
+  ) {
     // build the query string
     // coerce to any type for convenience
     let requestMap: StringMap = {
-      'redirect_uri': request.redirectUri,
-      'client_id': request.clientId,
-      'response_type': request.responseType,
-      'state': request.state,
-      'scope': request.scope
+      redirect_uri: request.redirectUri,
+      client_id: request.clientId,
+      response_type: request.responseType,
+      state: request.state,
+      scope: request.scope
     };
 
     // copy over extras
@@ -118,17 +160,23 @@ export abstract class AuthorizationRequestHandler {
   completeAuthorizationRequestIfPossible(): Promise<void> {
     // call complete authorization if possible to see there might
     // be a response that needs to be delivered.
-    log(`Checking to see if there is an authorization response to be delivered.`);
+    log(
+      `Checking to see if there is an authorization response to be delivered.`
+    );
     if (!this.notifier) {
       log(`Notifier is not present on AuthorizationRequest handler.
-          No delivery of result will be possible`)
+          No delivery of result will be possible`);
     }
     return this.completeAuthorizationRequest().then(result => {
       if (!result) {
         log(`No result is available yet.`);
       }
       if (result && this.notifier) {
-        this.notifier.onAuthorizationComplete(result.request, result.response, result.error);
+        this.notifier.onAuthorizationComplete(
+          result.request,
+          result.response,
+          result.error
+        );
       }
     });
   }
@@ -136,22 +184,35 @@ export abstract class AuthorizationRequestHandler {
   /**
    * Sets the default Authorization Service notifier.
    */
-  setAuthorizationNotifier(notifier: AuthorizationNotifier): AuthorizationRequestHandler {
+  setAuthorizationNotifier(
+    notifier: AuthorizationNotifier
+  ): AuthorizationRequestHandler {
     this.notifier = notifier;
     return this;
-  };
+  }
+
+  /**
+   * Sets the window open notifier.
+   */
+  setWindowOpenerNotifier(
+    notifier: WindowOpenerNotifier
+  ): AuthorizationRequestHandler {
+    this.windowOpenerNotifier = notifier;
+    return this;
+  }
 
   /**
    * Makes an authorization request.
    */
   abstract performAuthorizationRequest(
-      configuration: AuthorizationServiceConfiguration,
-      request: AuthorizationRequest): void;
+    configuration: AuthorizationServiceConfiguration,
+    request: AuthorizationRequest
+  ): void;
 
   /**
    * Checks if an authorization flow can be completed, and completes it.
    * The handler returns a `Promise<AuthorizationRequestResponse>` if ready, or a `Promise<null>`
    * if not ready.
    */
-  protected abstract completeAuthorizationRequest(): Promise<AuthorizationRequestResponse|null>;
+  protected abstract completeAuthorizationRequest(): Promise<AuthorizationRequestResponse | null>;
 }

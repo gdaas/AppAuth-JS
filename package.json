@@ -1,5 +1,5 @@
 {
-  "name": "@openid/appauth",
+  "name": "@gdaas/appauth",
   "version": "0.3.5",
   "description": "A general purpose OAuth client.",
   "author": "The OpenID Foundation",
